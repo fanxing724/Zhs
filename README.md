@@ -167,6 +167,8 @@ python main.py -c 114514 -l 25
 python main.py -c 114514 -d --proxy http://127.0.0.1:2333
 # 又比如您想只干某几个视频, 那您可以使用 -v 传入视频 ID
 python main.py -c 114514 -v 1989 604
+# 刷ai课程，ai课程号为 114514，classId为 4444
+python main.py -ai 114514 4444
 ```
 
 什么？不知道课程 ID 或视频 ID? 进入课程界面就可以在网址里看到了.  
@@ -216,6 +218,7 @@ python main.py --fetch
 - `--tree_view`: 课程目录结构，关闭后不显示所有课程目录。
 - `--progressbar_view`: 进度条控制，关闭后不显示当前视频进度。
 - `--image_path`: 登录二维码保存路径，留空则不保存。
+- `-ai`, `--aicourse`: AI课程, Input AI Course ID and CLASS ID to fu*k aiCourse
 - `-h` `--help`: 显示帮助
 
 运行示例如下:

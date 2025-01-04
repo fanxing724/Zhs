@@ -1532,6 +1532,7 @@ class ExamCtx:
         self.progress_view = progress_view
 
         self.answerCache = {}
+        self.allAnswerCache = {} # 存储同课程所有题目的答案
         self.sheetContent = None
         self.timeUpdateIndex = 0
         self.examStopped = False
@@ -1571,8 +1572,45 @@ class ExamCtx:
                 json.dump({}, f)
 
         return answerpath
+    
+    def getAllAnswerpath(self): # 同课程所有题目的答案
+        answerpath = getRealPath(
+            f"aiexamAnswer/{self.courseId}/data.json")
+
+        # 确保目录存在
+        os.makedirs(os.path.dirname(answerpath), exist_ok=True)
+
+        # 如果文件不存在，创建一个包含空字典的 JSON 文件
+        if not os.path.exists(answerpath):
+            with open(answerpath, "w", encoding="utf-8") as f:
+                json.dump({}, f)
+
+        return answerpath
 
     def readAnswerCache(self, examTestId):
+        Allanwerpath = self.getAllAnswerpath()
+        path = getRealPath(f"aiexamAnswer/{self.courseId}/")
+        files = os.listdir(path)
+        Allcache = {}
+        for file in files:
+            if file == "data.json":
+                continue
+            file_path = os.path.join(path, file)
+            with open(file_path, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+                Allcache.update(cache)
+        
+        self.allAnswerCache = {}
+        for key, value in Allcache.items():
+            if '_' in key:
+                questionId, version = key.split('_')
+                self.allAnswerCache[f"{questionId}_{version}"] = value
+            else:
+                self.allAnswerCache[key] = value
+                # 为没有版本号的答案添加默认版本
+                value['version'] = 1
+
+
         answerpath = self.getAnswerpath(examTestId)
         with open(answerpath, "r", encoding="utf-8") as f:
             cache = json.load(f)
@@ -1588,16 +1626,20 @@ class ExamCtx:
                 # 为没有版本号的答案添加默认版本
                 value['version'] = 1
 
-        return self.answerCache
+        return self.answerCache, self.allAnswerCache
 
     def writeAnswerCacheToDisk(self):
         answerpath = self.getAnswerpath(self.examTestId)
         with open(answerpath, "w", encoding="utf-8") as f:
             json.dump(self.answerCache, f, ensure_ascii=False, indent=4)
 
+        allAnswerpath = self.getAllAnswerpath()
+        with open(allAnswerpath, "w", encoding="utf-8") as f:
+            json.dump(self.allAnswerCache, f, ensure_ascii=False, indent=4)
+
     def getAnswer(self, questionId: int, version: int = 1) -> dict | None:
         key = str(questionId) if version == 1 else f"{questionId}_{version}"
-        result = self.answerCache.get(key)
+        result = self.allAnswerCache.get(key) # 从同课程所有题目的答案中获取
         return result
 
     def setAnswer(self, questionId: int, version: int, answer_data: dict):
@@ -1608,6 +1650,14 @@ class ExamCtx:
             "answer_content": answer_data.get("answer_content", ""),
             "questionDict": answer_data.get("questionDict", {})
         }
+        self.allAnswerCache[str(questionId) if version == 1 else f"{questionId}_{version}"] = {
+            "version": version,
+            "question": answer_data.get("question", ""),
+            "answer": answer_data.get("answer", ""),
+            "answer_content": answer_data.get("answer_content", ""),
+            "questionDict": answer_data.get("questionDict", {})
+        }
+
         self.writeAnswerCacheToDisk()
 
     def openExam(self, triedTimes: int = 0):
